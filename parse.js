@@ -82,7 +82,7 @@ Parser.GetNextExpression = function(text, start, open, close, seperator)
 
 	// return all text if no tags found
 	if(exp == "")
-		exp = text;
+		exp = text.slice(start);
 	return exp;
 }
 
