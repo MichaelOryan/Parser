@@ -69,7 +69,6 @@ Parser.EvalExpression = function (exp, dict)
 	// convert [ ] into brackets for mathjs expressions
 	exp = exp.replace(/\[/g, "(");
 	exp = exp.replace(/\]/g, ")");
-	console.log(exp);
 	try{
 		// create btree via mathjs
 		var btree = math.parse(exp);
