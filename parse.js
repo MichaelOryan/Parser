@@ -20,7 +20,7 @@ Parser.Enclosed = function(opening, closing, str, start)
 				count--;
 
 		}
-		stop = index - 1;
+		stop = (count == 0 ? index - 1 : -1);
 	}
 	
 	return stop;
@@ -38,6 +38,8 @@ Parser.RegexCombine = function(options)
 	return regex;
 }
 
+// if else elseif end if tag finding
+// not implemented
 Parser.Operations = {
 	//"if": "^\\s*(I|i)(F|f)\\s*\\(.*\\)\\s*$",
 	"if": "(\\[\\s*(I|i)(F|f)\\s*\\(.*\\)\\s*\\])",
@@ -57,52 +59,72 @@ Parser.IsEquation = function(str){
 
 Parser.GetNextExpression = function(text, start, open, close, seperator)
 {
+	// difference between open and close bracket count
 	var count = 0;
+	// First opening tag, will always start on the first opening char
 	var firstOpen = text.indexOf(open);
+	// the contents inside the opening and closing tag
+	// [hello:[name]:[sadface]] -> hello:[name]:[sadface]
 	var exp = "";
+	// Consider entire text from left to right until we have an expression/tag
 	for(var i = 0; i < text.length && exp == ""; i++)
 	{
+		// increment difference on open found
 		if (text[i] == open)
 			count++;
+		// decrement difference on closed found
 		else if (text[i] == close)
 			count--;
+		// if we have a difference of 0 then we've found the opening and closing tag
 		else if (text[i] == seperator && count == 0)
 			exp = text.slice(start, i);
 	}
+
+	// return all text if no tags found
 	if(exp == "")
-		exp = text.slice(start);
+		exp = text;
 	return exp;
 }
 
 Parser.EvalExpression = function (exp, dict)
 {
+	// convert [ ] into brackets for mathjs expressions
 	exp = exp.replace(/\[/g, "(");
 	exp = exp.replace(/\]/g, ")");
 	try{
+		// create btree via mathjs
 		var btree = math.parse(exp);
-
+		// evaluate btree to a number/true/false
 		var answer = btree.eval(dict);
-		
+		// return answer
 		return answer;
 	}
 	catch(e)
 	{
+		// bad exp return it
 		return exp;
 	}
 	
 }
 
 // expression:true|false
+// Turnary expression
 Parser.EvalTurnary = function(text, dict)
 {
 
+	// true false expression
 	var exp = Parser.GetNextExpression(text, 0, "[", "]", ":");
+	// true portion
 	var yes = Parser.GetNextExpression(text, exp.length + 1, "[", "]", ":");
+	// false portion
 	var no = Parser.GetNextExpression(text, exp.length + yes.length + 2, "[", "]", ":");
 
+	// extract all tags and eval all expressions in exp portion
 	var exp = Parser.Parse(exp, dict);
 
+	// evaluate expression to find answer
 	var answer = Parser.EvalExpression(exp, dict);
+	// return parsed yes/true or no/false text
 	if(answer)
 		return Parser.Parse(yes, dict);
 	return Parser.Parse(no, dict);
@@ -131,10 +153,12 @@ Parser.Parse = function(text, dict) {
 			var begin = text.indexOf("[");
 			// find closing of this tag for tags in tags ie; functions [func:yes|no]
 			var end = Parser.Enclosed("[","]", text, begin + 1); // end of function or end of text
-			
+			// begin -1 no opening found
+			// end -1 no close found
 			while(begin != -1 && end != -1) {
 				// Put contents into tag
-				var tag = text.slice(begin + 1, end); 
+				// if no closing entire contents are tag
+				var tag = text.slice(begin + 1, (end >= 0 ? end : text.length)); 
 				
 				// Text that will replace tag
 				var newText;
