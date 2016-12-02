@@ -1,0 +1,144 @@
+<html>
+	<head>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  		<link rel="stylesheet" href="jquery-ui.css">
+  		<script src="jquery-1.12.4.js"></script>
+  		<script src="jquery-ui.js"></script>
+
+		<script src="parse.js"></script>
+		<script src="math.js"></script>
+
+	</head>
+
+	<body>
+	<div style="width:100%; height:35%;background-color: fafafa;" id="formatted"></div>
+
+	<div class="ui-widget" style="width:100%;">
+	<textarea name="message" rows="20" cols="125" id="user_input">
+</textarea>
+
+	<textarea name="parse" rows="20" cols="75" id="object">
+
+{
+   "name":"Michael",
+   "name1":"Sunny",
+   "height":180,
+   "height1":"175",
+   "ismale":true,
+   "ismale1":true,
+   "isfemale":false,
+   "isfemale1":false,
+   "job":"student",
+   "job1":"developer"
+}</textarea>
+	<button type="button" onclick="updateObj()">Update Parse</button>
+	<button type="button" onclick="genStr()">Generate String</button>
+	<button type="button" onclick="start()">Start Parser</button>
+	<button type="button" onclick="stop()">Stop Parser</button>
+	<input type="text" id="tags">
+	</div>
+	<textarea name="parse" rows="10" cols="150" id="jsString"></textarea>
+	<script></script>
+
+	<script>
+		var parse = {};
+		var source = document.getElementsByName('message');
+		var target = document.getElementById("formatted");
+		var tick;
+
+		function start() {
+		    clearInterval(tick);
+		    tick = window.setInterval(updateText, 1000);
+		}
+
+		function stop() {
+		    clearInterval(tick);
+		}
+
+		function updateText() {
+		    updateObj();
+		    var input = source[0].value.replace(/(\r\n|\n|\r)/gm, "<br/>")
+		        //var input = document.getElementById("user_input").innerHTML;
+		    var text = Parser.Parse(input, parse);
+		    if (text != "")
+		        target.innerHTML = text;
+		}
+
+		function updateObj() {
+		    var target = "" + document.getElementsByName("parse")[0].value;
+		    //console.log(target);
+		    try {
+		        parse = JSON.parse(target);
+		        var keys = [];
+		        for (key in parse) {
+		            keys.push(key);
+		        }
+		        textareaAutoComplete(keys);
+
+		    } catch (e) {
+
+		    }
+
+		}
+
+		function genStr() {
+		    var str = source[0].value;
+		    //console.log(str);
+		    str = str.replace(/(\r\n|\n|\r)/gm, "<br/>");
+		    //document.getElementById("jsString").innerHTML = str;
+		    $("#jsString").val(str);
+
+		}
+	</script>
+
+		<script>
+			function textareaAutoComplete(keys) {
+			    $(function() {
+			        var availableTags = keys; // array of autocomplete words
+			        var minWordLength = 2;
+
+			        function split(val) {
+			            return val.split(' ');
+			        }
+
+			        function extractLast(term) {
+			            return split(term).pop();
+			        }
+			        $("#user_input") // jQuery Selector
+			            // don't navigate away from the field on tab when selecting an item
+			            .bind("keydown", function(event) {
+			                if (event.keyCode === $.ui.keyCode.TAB && $(this).data("ui-autocomplete").menu.active) {
+			                    event.preventDefault();
+			                }
+			            }).autocomplete({
+			                minLength: minWordLength,
+			                source: function(request, response) {
+			                    // delegate back to autocomplete, but extract the last term
+			                    var term = extractLast(request.term);
+			                    if (term.length >= minWordLength) {
+			                        response($.ui.autocomplete.filter(availableTags, term));
+			                    }
+			                },
+			                focus: function() {
+			                    // prevent value inserted on focus
+			                    return false;
+			                },
+			                select: function(event, ui) {
+			                    var terms = split(this.value);
+			                    // remove the current input
+			                    terms.pop();
+			                    // add the selected item
+			                    terms.push(ui.item.value);
+			                    // add placeholder to get the comma-and-space at the end
+			                    terms.push("");
+			                    this.value = terms.join(" ");
+			                    return false;
+			                }
+			            });
+			    });
+			}</script>
+
+	</body>
+</html>
