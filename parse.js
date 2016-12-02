@@ -4,29 +4,7 @@ isFunc = function(obj) {
 	return !!(obj && obj.constructor && obj.call && obj.apply);
 };
 
-Parser.Enclosed = function(opening, closing, str, start)
-{
-	var count = 1;
-	var closeCount = 0;
-	var stop = start;
-	if(start != -1)
-	{
-		var index = start;
-		for(index = start; index < str.length && count > 0 ; index++)	
-		{
-			if(str[index] == opening)
-				count++;
-			else if (str[index] == closing)
-				count--;
-
-		}
-		stop = (count == 0 ? index - 1 : -1);
-	}
-	
-	return stop;
-	
-}
-
+/*
 Parser.RegexCombine = function(options)
 {
 	var regex = "(";
@@ -56,7 +34,7 @@ Parser.IsEquation = function(str){
 	var eq = eq || (/^[\|\[|\]\d\*\-\+\<\>\/\=\ ]*$/.test(str)==true);
 	return eq;
 }
-
+*/
 Parser.GetNextExpression = function(text, start, open, close, seperator)
 {
 	// difference between open and close bracket count
@@ -91,6 +69,7 @@ Parser.EvalExpression = function (exp, dict)
 	// convert [ ] into brackets for mathjs expressions
 	exp = exp.replace(/\[/g, "(");
 	exp = exp.replace(/\]/g, ")");
+	console.log(exp);
 	try{
 		// create btree via mathjs
 		var btree = math.parse(exp);
@@ -145,24 +124,57 @@ Parser.IsTagEquation = function(str)
 
 }
 
+Parser.FindNextTag = function(reg, text)
+{
+	
+	// default
+	var tag = {
+		begin:-1,
+		end:-1
+	};
+	// difference in opening tags and closing tags
+	var count = 0;
+
+	// current opening or closing char
+	var c;
+
+	while( (count !== 0 || tag.begin < 0) && ( (c = reg.exec(text)) != null) )
+	{
+		if(c[0] == "[")
+		{
+			count++
+			if(tag.begin == -1)
+				tag.begin = c.index;
+		}
+		else if (c[0] == "]")
+		{
+			count--;
+			if(count == 0)
+				tag.end = c.index;
+		}
+	}
+
+	return tag;
+
+}
+
 Parser.Parse = function(text, dict) {
+	var reg = new RegExp("(\\[|\\])","g");
 	try {
 		// Simple parser
 		if(dict) {
 			// find opening of tag
-			var begin = text.indexOf("[");
-			// find closing of this tag for tags in tags ie; functions [func:yes|no]
-			var end = Parser.Enclosed("[","]", text, begin + 1); // end of function or end of text
-			// begin -1 no opening found
-			// end -1 no close found
-			while(begin != -1 && end != -1) {
+			var index = Parser.FindNextTag(reg, text);
+			// problem with no closing tag.
+			while( index.begin != -1 && index.end != -1 ) {
+				
+
 				// Put contents into tag
 				// if no closing entire contents are tag
-				var tag = text.slice(begin + 1, (end >= 0 ? end : text.length)); 
-				
+				var tag = text.slice(index.begin + 1, (index.end >= 0 ? index.end : text.length)); 
+
 				// Text that will replace tag
 				var newText;
-
 				// Check to see if we have an expression or tag not in dict
 				// [varname]
 				if(!Parser.IsTagEquation(tag) && dict[tag] != null) {
@@ -182,23 +194,14 @@ Parser.Parse = function(text, dict) {
 					newText = Parser.EvalExpression(tag, dict);
 				}
 				// nothing found just use tag name
+
 				else {
 					newText = tag;
 				}
 				// Replace tag with newText
-				text = text.slice(0, begin) + newText + text.slice(end+1);//(end <= text.length ? text.slice(end+1) : "");
-
-				if(newText)
-				{
-					// find new beginning and end tags
-					begin = text.indexOf("[", begin + newText.length);
-					end = Parser.Enclosed("[","]", text, begin + 1);
-				}
-				else
-				{
-					begin = -1;
-					end = -1;
-				}
+				text = text.slice(0, index.begin) + newText + text.slice(index.end+1);//(end <= text.length ? text.slice(end+1) : "");
+				reg = new RegExp("(\\[|\\])","g");
+				index = Parser.FindNextTag(reg, text);
 			}
 		}
 		// Return our parsed text
